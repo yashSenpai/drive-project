@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "description": "A project inspired by Google Drive",
   "main": "index.js",
+  "type": "module",
   "scripts": {
-    "dev": "nodemon src/index.js"
+    "dev": "nodemon -r dotenv/config --experimental-json-modules src/index.js"
   },
   "author": "Yash Tyagi",
   "license": "ISC",
