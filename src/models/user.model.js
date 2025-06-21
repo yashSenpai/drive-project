@@ -1,4 +1,5 @@
 import mongoose, { Schema } from "mongoose";
+import bcrypt from "bcrypt";
 
 const userSchema = new Schema({
   username:{
@@ -26,5 +27,17 @@ const userSchema = new Schema({
         required:[true,'Password is required.']
   }
 })
+
+userSchema.pre("save",async function(next){
+  if(!this.isModified("password")){
+    return next
+  }else{
+    this.password = await bcrypt.hash(this.password, 10)
+  }
+})
+
+userSchema.methods.isPasswordCorrect = async function (password) {
+  return await bcrypt.compare(password, this.password)
+}
 
 export const User = mongoose.model("User", userSchema)
