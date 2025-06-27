@@ -29,6 +29,14 @@ const userSchema = new Schema({
   },
   refreshToken:{
         type: String
+  },
+  storageUsed:{
+    type: Number,
+    default: 0
+  },
+  storageLimit:{
+    type: Number,
+    default: 20971520 //limit is 20 bytes
   }
 },{timestamps:true})
 
