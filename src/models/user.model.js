@@ -36,7 +36,7 @@ const userSchema = new Schema({
   },
   storageLimit:{
     type: Number,
-    default: 20971520 //limit is 20 bytes
+    default: 20971520 //limit is 20 megabytes
   }
 },{timestamps:true})
 
