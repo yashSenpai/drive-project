@@ -33,9 +33,7 @@ const fileSchema = new Schema({
         required: true
     }, // actual file location in cloud
     tags: [{
-        type: String,
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Tag"
+        type: String
     }]
 })
 

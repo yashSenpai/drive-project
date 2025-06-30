@@ -3,6 +3,21 @@ import { User} from "../models/user.model.js"
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 
+const generateAccessAndRefereshTokens = asyncHandler(async(req,res) =>{
+    try{
+        const user = await User.findById(req.user._id)
+        const accessToken = user.generateAccessToken
+        const refreshToken = generateRefreshToken
+
+        user.refreshToken = refreshToken
+        await user.save({validateBeforeSave:false})
+
+        return {accessToken, refreshToken}
+    }catch(error){
+        throw new ApiError(500,"Something went wrong while generating referesh and access token.")
+    }
+})
+
 const registerUser = asyncHandler( async (req,res) => {
     const {fullname, password, email, username} = req.body
 
@@ -29,8 +44,8 @@ const registerUser = asyncHandler( async (req,res) => {
         throw new ApiError(400,"User registration unsuccessful.")
     }
 
-    return res.status(200).json(
-        new ApiResponse(200,createdUser,"User created successfully.")
+    return res.status(201).json(
+        new ApiResponse(201,createdUser,"User created successfully.")
     )
 })
 
@@ -163,7 +178,49 @@ const updateFullnameDetails = asyncHandler(async(req,res)=>{
     return res.status(200).json(
         new ApiResponse(200,user,"Fullname updated successfully!!")
     )
+})
 
+const refreshAccessToken = asyncHandler(async(req,res) =>{
+    const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken
+    if(!incomingRefreshToken){
+        throw new ApiError(401,"Unauthorized Request.")
+    }
+
+    try{
+        const decodedToken = jwt.verify(
+            incomingRefreshToken,
+            process.env.REFRESH_TOKEN_SECRET
+        )
+
+        const user = await User.findById(decodedToken?._id)
+
+        if(!user){
+            throw new ApiError(401, "Invalid Refresh Token.")
+        }
+
+        if(incomingRefreshToken !== user?.refreshToken){
+            throw new ApiError(401, "Refresh token is expired or used.")
+        }
+
+        const options = {
+            httpOnly:true,
+            secure:true
+        }
+
+        const {accessToken, newRefreshToken} = await generateAccessAndRefereshTokens(user._id)
+
+        return res.status(200)
+        .cookie("accessToken",accessToken,options)
+        .cookie("refreshToken",newRefreshToken,options)
+        .json(
+            new ApiResponse(200,
+                {accessToken, refreshToken: newRefreshToken},
+                "Access Token Refresed."
+            )
+        )
+    }catch(error){
+        throw new ApiError(401,error?.message || "Unauthorized Refresh Request.")
+    }
 })
 
 export {
@@ -174,4 +231,5 @@ export {
     getCurrentUser,
     updateEmailDetails,//work on this as send otp to new email first
     updateFullnameDetails,
+    refreshAccessToken
 }
