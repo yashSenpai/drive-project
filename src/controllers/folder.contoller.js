@@ -17,7 +17,7 @@ const createFolder = asyncHandler(async(req,res)=>{
 
     const {name, owner, parent} = req.body
     
-    if(!name || name.trim() === "" ||!owner){
+    if(!name || name.trim() === "" || !owner){
         throw new ApiError(400, "Name and Owner required.")
     }
 
