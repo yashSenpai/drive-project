@@ -20,3 +20,5 @@ router.route("/change-Password").post(verifyJWT,changePassword)
 router.route("/current-user").get(verifyJWT,getCurrentUser)
 router.route("/change-email").post(verifyJWT,updateEmailDetails)
 router.route("/change-Fullname").post(verifyJWT,updateFullnameDetails)
+
+export default router
