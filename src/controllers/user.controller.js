@@ -2,21 +2,22 @@ import { ApiError } from "../utils/ApiError.js";
 import { User} from "../models/user.model.js"
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import jwt from "jsonwebtoken";
 
-const generateAccessAndRefereshTokens = asyncHandler(async(req,res) =>{
+const generateAccessAndRefreshTokens = async(userId) =>{
     try{
-        const user = await User.findById(req.user._id)
-        const accessToken = user.generateAccessToken
-        const refreshToken = generateRefreshToken
+        const user = await User.findById(userId)
+        const accessToken = user.generateAccessToken()
+        const refreshToken = user.generateRefreshToken()
 
         user.refreshToken = refreshToken
         await user.save({validateBeforeSave:false})
 
         return {accessToken, refreshToken}
     }catch(error){
-        throw new ApiError(500,"Something went wrong while generating referesh and access token.")
+        throw new ApiError(500,"Something went wrong while generating refresh and access token.")
     }
-})
+}
 
 const registerUser = asyncHandler( async (req,res) => {
     const {fullname, password, email, username} = req.body
@@ -63,16 +64,16 @@ const loginUser = asyncHandler(async (req, res) =>{
     const user = await User.findOne({email})
 
     if(!user){
-        throw new ApiError(400,"User not found.")
+        throw new ApiError(404,"User not found.")
     }
 
     const isPasswordValid = await user.isPasswordCorrect(password)
 
     if(!isPasswordValid){
-        throw new ApiError(400,"Password Invalid.")
+        throw new ApiError(401,"Password Invalid.")
     }
 
-    const {accessToken, refreshToken} = await generateAccessAndRefereshTokens(user._id)
+    const {accessToken, refreshToken} = await generateAccessAndRefreshTokens(user._id)
 
     const loggedInUser = await User.findById(user._id).select("-password -refreshToken")
 
@@ -125,7 +126,7 @@ const changePassword = asyncHandler(async(req,res)=>{
         throw new ApiError(400, "New passwords entered do not match.")
     }
 
-    if(newPassword1.length <= 8){
+    if(newPassword1.length < 8){
         throw new ApiError(400,"Enter a password atleast 8 characters long.")
     }
 
@@ -139,7 +140,7 @@ const changePassword = asyncHandler(async(req,res)=>{
 })
 
 const getCurrentUser = asyncHandler(async(req, res) => {
-    return res.status(200).json(200,req.user,"User information fetched successfully.")
+    return res.status(200).json(new ApiResponse(200,req.user,"User information fetched successfully."))
 })
 
 const updateEmailDetails = asyncHandler(async(req,res) => {
@@ -148,7 +149,9 @@ const updateEmailDetails = asyncHandler(async(req,res) => {
     //update it in the database
     //return the response
 
-    const email = req.body
+    const {email} = req.body
+
+    console.log(email)
 
     if(!email || typeof email !== "string"){
         throw new ApiError(400,"Valid email field required.")
@@ -161,7 +164,7 @@ const updateEmailDetails = asyncHandler(async(req,res) => {
 
 const updateFullnameDetails = asyncHandler(async(req,res)=>{
     
-    const fullname = req.body
+    const {fullname} = req.body
 
     if(!fullname||typeof fullname !== "string"){
         throw new ApiError(400,"Valid fullname requied.")
@@ -186,6 +189,8 @@ const refreshAccessToken = asyncHandler(async(req,res) =>{
         throw new ApiError(401,"Unauthorized Request.")
     }
 
+    console.log(incomingRefreshToken)
+
     try{
         const decodedToken = jwt.verify(
             incomingRefreshToken,
@@ -207,7 +212,7 @@ const refreshAccessToken = asyncHandler(async(req,res) =>{
             secure:true
         }
 
-        const {accessToken, newRefreshToken} = await generateAccessAndRefereshTokens(user._id)
+        const {accessToken, newRefreshToken} = await generateAccessAndRefreshTokens(user._id)
 
         return res.status(200)
         .cookie("accessToken",accessToken,options)
@@ -215,7 +220,7 @@ const refreshAccessToken = asyncHandler(async(req,res) =>{
         .json(
             new ApiResponse(200,
                 {accessToken, refreshToken: newRefreshToken},
-                "Access Token Refresed."
+                "Access Token Refreshed."
             )
         )
     }catch(error){

@@ -21,10 +21,10 @@ import fileRouter from "./routes/file.route.js"
 import folderRouter from "./routes/folder.route.js"
 
 
-app.use("api/v1/userRouter", userRouter)
-app.use("api/v1/tagRouter", tagRouter)
-app.use("api/v1/activityRouter", activityRouter)
-app.use("api/v1/fileRouter", fileRouter)
-app.use("api/v1/folderRouter", folderRouter)
+app.use("/api/v1/users", userRouter)
+app.use("/api/v1/tags", tagRouter)
+app.use("/api/v1/activities", activityRouter)
+app.use("/api/v1/files", fileRouter)
+app.use("/api/v1/folders", folderRouter)
 
 export { app }
