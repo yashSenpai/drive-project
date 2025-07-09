@@ -15,7 +15,9 @@ const createFolder = asyncHandler(async(req,res)=>{
     //Create a new folder with name, owner, parent, and path.
     //Save and return the folder.
 
-    const {name, owner, parent} = req.body
+    const {name, parent} = req.body
+
+    const owner = req.user._id
     
     if(!name || name.trim() === "" || !owner){
         throw new ApiError(400, "Name and Owner required.")
@@ -85,7 +87,7 @@ const getUserFolders = asyncHandler(async(req,res)=>{
     //Find all folders where owner == userId and parent == null.
     //Return the list.
 
-    const {userId} = req.body||req.params
+    const {userId} = req.params || req.body
 
     if(!userId){
         throw new ApiError(400, "User not found.")
@@ -200,6 +202,10 @@ const renameFolder = asyncHandler(async(req,res)=>{
         throw new ApiError(404, "Folder not found")
     }
 
+    if(folder.name === name){
+        return res.status(200).json(new ApiResponse(200, folder, "Folder name is already the same."))
+    }
+
     const renamedFolder = await Folder.findByIdAndUpdate(folderId, {
         $set:{name:name}
     },{
@@ -208,44 +214,6 @@ const renameFolder = asyncHandler(async(req,res)=>{
     })
 
     return res.status(200).json(new ApiResponse(200, renamedFolder, "Folder renamed successfully."))
-})
-
-const updateFolder = asyncHandler(async(req,res)=>{
-    //Goal: Update folder details like name.
-
-    //Extract folderId from req.params, name (and others if needed) from req.body.
-    //Find folder by ID.
-    //If not found, return error.
-    //Update provided fields (e.g., folder.name = name).
-    //Save and return updated folder.
-
-    const {folderId} = req.params
-    
-    if(!folderId){
-        throw new ApiError(400, "Folder Id is required.")
-    }
-    
-    const {name,owner,parent,path} = req.body
-
-    let updateData = {};
-
-    if (name != null || "") updateData.name = name;
-    if (owner != null || "") updateData.owner = owner;
-    if (parent != null || "") updateData.parent = parent;
-    if (path != null || "") updateData.path = path;
-    
-    const folder = await Folder.findByIdAndUpdate(folderId, {
-        $set:updateData
-    },{
-        new:true,
-        runValidators:true
-    }).select("name owner updatedAt")
-
-    if(!folder){
-        throw new ApiError(404,"Folder not found")
-    }
-
-    return res.status(200).json(new ApiResponse(200, folder, "Folder updated successfully."))
 })
 
 const moveFolder = asyncHandler(async(req,res)=>{
@@ -343,7 +311,6 @@ export {
     getFolderChildren,
     getFolderTree,
     renameFolder,
-    updateFolder,
     moveFolder,
     deleteFolder
 }
