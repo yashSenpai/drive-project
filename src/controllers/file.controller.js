@@ -2,6 +2,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { File } from "../models/file.model.js"
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import { uploadOnCloudinary } from "../utils/fileUpload.js"
 
 const uploadFile = asyncHandler(async(req,res)=>{
     // Input: req.body: { name, type, size, owner, folder, url, tags } & Output: saved file
@@ -12,7 +13,7 @@ const uploadFile = asyncHandler(async(req,res)=>{
     //4. Save to DB.
     //5. Return saved file as response.
 
-    const {name, type, size, owner, folder, url, tags} = req.body
+    const {name, type, size, owner, folder, tags} = req.body
 
     if([name, owner, folder].some((field)=>!field || field.trim() === "")){
         throw new ApiError(400, "All fields required.")
@@ -24,13 +25,25 @@ const uploadFile = asyncHandler(async(req,res)=>{
         throw new ApiError(400, "File with the same name already exists.")
     }
 
+    const urlLocalPath = req.file?.path
+
+    if (!urlLocalPath) {
+        throw new ApiError(400, "File is required")
+    }
+
+    const url = await uploadOnCloudinary(urlLocalPath)
+
+    if(!url.url){
+        throw new ApiError(400, "Error while uploading on file")
+    }
+
     const createFile = await File.create({
         name: name,
         type: type,
         size: size,
         owner: owner,
         folder: folder,
-        url: url,
+        url: url.url,
         tags: tags
     })
 
@@ -75,7 +88,7 @@ const updateFile = asyncHandler(async(req,res)=>{
     //2. Use File.findByIdAndUpdate(fileId, updateData, { new: true }).
     //3. Return updated file.
 
-    const {fileId} = req.params.fileId
+    const {fileId} = req.params
 
     const {name, tags} = req.body
 
@@ -115,7 +128,7 @@ const deleteFile = asyncHandler(async(req,res)=>{
     //3. If needed, also remove from cloud (via URL).
     //4. Return confirmation.
 
-    const fileId = req.params.fileId
+    const {fileId} = req.params
 
     if(!fileId){
         throw new ApiError(400, "Invalid file Id.")
@@ -138,7 +151,7 @@ const getFilesByFolder = asyncHandler(async(req,res)=>{
     //2. Use File.find({ folder: folderId }).
     //3. Return files.
 
-    const folderId = req.params.folderId
+    const {folderId} = req.params
 
     if(!folderId){
         throw new ApiError(400, "Invalid Folder Id.")
@@ -161,7 +174,7 @@ const getFilesByOwner = asyncHandler(async(req,res)=>{
     //2. Use File.find({ owner: ownerId }).
     //3. Return files.
 
-    const ownerId = req.params.ownerId
+    const {ownerId} = req.params
 
     if(!ownerId){
         throw new ApiError(400, "Owner's Id not provided.")
@@ -170,7 +183,7 @@ const getFilesByOwner = asyncHandler(async(req,res)=>{
     const ownerFiles = await File.find({owner:ownerId})
 
     if(!ownerFiles || ownerFiles.length === 0){
-        throw new ApiError(404, "Matching files not found.")
+        return res.status(200).json(new ApiResponse(200, [], "Matching files returned successfully."))
     }
 
     return res.status(200).json(new ApiResponse(200, ownerFiles, "Matching files returned successfully."))
@@ -183,7 +196,7 @@ const searchFilesByTagName = asyncHandler(async(req,res)=>{
     //2. Use regex in File.find({ tags: /q/i })
     //3. Return matching files.
 
-    const searchTag = req.query.searchText
+    const {searchTag} = req.params
 
     if(!searchTag){
         throw new ApiError(400, "Searching text not found.")
@@ -211,7 +224,7 @@ const searchFilesByFileName = asyncHandler(async(req,res)=>{
     //2. Use regex in File.find({ name: /q/i })
     //3. Return matching files.
 
-    const searchText = req.query.searchText
+    const {searchText} = req.params
 
     if(!searchText){
         throw new ApiError(400, "Searching text not found.")
@@ -238,7 +251,7 @@ const filterFilesByType = asyncHandler(async(req,res)=>{
     //3. Use File.find({ type }).
     //4. Return files.
 
-    const {type} = req.query
+    const {type} = req.params
 
     const allowedTypes = ["image","video","document"]
     
@@ -252,7 +265,7 @@ const filterFilesByType = asyncHandler(async(req,res)=>{
         return res.status(204).json(new ApiResponse(204, [], "No files found for this filter."))
     }
 
-    return res.status(200).json(new ApiResponse(200, [], "Files found for the filter successfully."))
+    return res.status(200).json(new ApiResponse(200, filteredFiles, "Files found for the filter successfully."))
 })
 
 const filterFilesBySizeRange = asyncHandler(async(req,res)=>{
@@ -262,9 +275,7 @@ const filterFilesBySizeRange = asyncHandler(async(req,res)=>{
     //2. Use File.find({ size: { $gte: minSize, $lte: maxSize } }).
     //3. Return files.
 
-    const minsize = Number(req.query.minSize)
-
-    const maxsize = Number(req.query.maxSize)
+    const {minsize, maxsize} = req.body
 
     if(Number.isNaN(minsize) || Number.isNaN(maxsize) || minsize < 0 || maxsize < 0 || maxsize < minsize){
         throw new ApiError(400, "Send minimum and maximum range of file size.")
@@ -286,8 +297,11 @@ const bulkDeleteFiles = asyncHandler(async(req,res)=>{
     //1. Extract array of fileIds.
     //2. Use File.deleteMany({ _id: { $in: fileIds } }).
     //3. Return success message. 
+    
+    const {fileIds} = req.body
 
-    const fileIds = req.body.fileIds
+    console.log(fileIds);
+    
 
     if(!fileIds || !Array.isArray(fileIds) || fileIds.length === 0){
         throw new ApiError(400, "Invalid File Ids.")
@@ -314,9 +328,9 @@ const moveFilesToFolder = asyncHandler(async(req,res) =>{
     //2. Use File.updateMany({ _id: { $in: fileIds } }, { folder: newFolderId }).
     //3. Return success.
 
-    const fileIds = req.body.fileIds
+    const {fileIds} = req.body
 
-    const newFolderId = req.body.newFolderId
+    const {newFolderId} = req.body
 
     if(!fileIds || !Array.isArray(fileIds)){
         throw new ApiError(400, "Invalid File Id") //File Ids must be an array.
@@ -348,9 +362,9 @@ const addTagsToFile = asyncHandler(async (req,res) => {
     //2. Use File.findByIdAndUpdate(fileId, { $addToSet: { tags: { $each: tags } } }, { new: true }).
     //3. Return updated file.
 
-    const fileId = req.params.fileId
+    const {fileId} = req.params
 
-    const tags = req.body.tags
+    const {tags} = req.body
 
     if(!fileId){
         throw new ApiError(404,"Invalid File Id.")
@@ -385,9 +399,9 @@ const removeTagsFromFile = asyncHandler(async(req,res)=> {
     //2. Use File.findByIdAndUpdate(fileId, { $pullAll: { tags } }, { new: true }).
     //3. Return updated file.
 
-    const fileId = req.params.fileId
+    const {fileId} = req.params
 
-    const tags = req.body.tags
+    const {tags} = req.body
 
     if(!fileId){
         throw new ApiError(400,"Invalid File Id.")
