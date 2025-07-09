@@ -13,9 +13,9 @@ const router = Router()
 
 router.route("/logActivity").post(verifyJWT, logActivity)
 router.route("/getAllActivities").get(verifyJWT, getAllActivities)
-router.route("/getActivitiesByUser").get(verifyJWT, getActivitiesByUser)
-router.route("/getActivitiesByFile").get(verifyJWT, getActivitiesByFile)
-router.route("/getActivitiesByFolder").get(verifyJWT, getActivitiesByFolder)
+router.route("/getActivitiesByUser/:userId").get(verifyJWT, getActivitiesByUser)
+router.route("/getActivitiesByFile/:fileId").get(verifyJWT, getActivitiesByFile)
+router.route("/getActivitiesByFolder/:folderId").get(verifyJWT, getActivitiesByFolder)
 router.route("/getRecentActivities").get(verifyJWT,getRecentActivities)
 
 export default router

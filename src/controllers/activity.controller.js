@@ -60,7 +60,7 @@ const getAllActivities = asyncHandler(async(req,res)=>{
     //Sort results by createdAt in descending order.
     //Return the list of activities.
     
-    const queryCollection = await Activity.find({}).populate("user").populate("file").populate("folder").sort({createdAt:-1})
+    const queryCollection = await Activity.find({}).populate("file").populate("folder").sort({createdAt:-1})
 
     if(!queryCollection || queryCollection.length === 0){
         throw new ApiError(400, "Activities extraction unsuccessful.")
@@ -78,7 +78,7 @@ const getActivitiesByUser = asyncHandler(async(req,res)=>{
     //Sort by createdAt descending.
     //Return the result.
 
-    const userId = req.params.userId
+    const {userId} = req.params
 
     if(!userId || userId.trim() === ""){
         throw new ApiError(400, "Invalid user Id.")
@@ -102,13 +102,13 @@ const getActivitiesByFile = asyncHandler(async(req,res)=>{
     //Sort by createdAt descending.
     //Return the result.
 
-    const fileId = req.params.fileId
+    const {fileId} = req.params
 
     if(!fileId || fileId.trim()===""){
         throw new ApiError(400, "Invalid File Id.")
     }
     
-    const activities = await Activity.find({file:fileId}).populate("user").sort({createdAt: -1})
+    const activities = await Activity.find({file:fileId}).sort({createdAt: -1})
 
     if(activities.length === 0){
         return res.status(200).json(new ApiResponse(200, {},"No actions found for this file."))
@@ -126,13 +126,13 @@ const getActivitiesByFolder = asyncHandler(async(req,res)=>{
     //Sort by createdAt descending.
     //Return the result.
 
-    const folderId = req.params.folderId
+    const {folderId} = req.params
 
     if(!folderId){
         throw new ApiError(400, "Invalid Folder Id.")
     }
 
-    const activities = await Activity.find({folder: folderId}).populate("user").sort({createdAt: -1})
+    const activities = await Activity.find({folder: folderId}).sort({createdAt: -1})
 
     if(activities.length === 0){
         return res.status(200).json(new ApiResponse(200, [], "No actions found in this folder."))
@@ -153,7 +153,7 @@ const getRecentActivities = asyncHandler(async(req,res)=>{
     //Populate user, file, and folder if needed.
     //Return the result.
 
-    const fetchRecentActions = await Activity.find({}).sort({createdAt: -1}).limit(10).lean().populate("user").populate("folder").populate("file")
+    const fetchRecentActions = await Activity.find({}).sort({createdAt: -1}).limit(10).lean()
 
     if(fetchRecentActions.length === 0){
         return res.status(200).json(new ApiResponse(200,[], "No recent actions."))
