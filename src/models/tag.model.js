@@ -8,6 +8,14 @@ const tagSchema = new Schema({
     usedBy:{
         type: mongoose.Schema.Types.ObjectId,
         ref: "User"
+    },
+    file:{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "File"
+    },
+    folder:{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Folder"
     }
 },{timestamps:true})
 

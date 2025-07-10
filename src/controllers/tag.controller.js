@@ -10,7 +10,7 @@ const createTag = asyncHandler(async(req,res)=>{
     //Save the document to the database.
     //Return the newly created tag as a JSON response.
 
-    const {name, usedBy} = req.body
+    const {name, usedBy, fileId, folderId} = req.body
 
     if(!name || name.trim()===""){
         throw new ApiError(400, "Invalid Tag Name.")
@@ -20,10 +20,28 @@ const createTag = asyncHandler(async(req,res)=>{
         throw new ApiError(400, "Invalid User Name.")
     }
 
-    const createdTag = await Tag.create({
+    const updateData = {
         name:name,
         usedBy:usedBy
-    })
+    }
+
+    if(!folderId && !fileId){
+        throw new ApiError(400, "Send either fileId or folderId.")
+    }
+
+    if(!folderId && fileId){
+        updateData.fileId = fileId.trim()
+    }
+
+    if(!fileId && folderId){
+        updateData.folderId = folderId.trim()
+    }
+
+    console.log(updateData);
+    
+    const createdTag = await Tag.create(
+        updateData
+    )
 
     if(!createdTag){
             throw new ApiError(400, "Tag creation unsuccessful.")
@@ -37,7 +55,7 @@ const getAllTags = asyncHandler(async(req,res)=>{
     //Optionally populate usedBy if you want user details.
     //Return the array of tags.
     
-    const tagCollection = await Tag.find({}).populate("usedBy")
+    const tagCollection = await Tag.find({})
 
     if(tagCollection.length === 0){
         return res.status(200).json(new ApiResponse(204, [], "No tags found."))
@@ -146,7 +164,7 @@ const searchTagsByName = asyncHandler(async(req,res)=>{
     //Use a regex query like: Tag.find({ name: { $regex: searchTerm, $options: "i" } })
     //Return matched tags.
 
-    const {searchTerm} = req.query
+    const {searchTerm} = req.params
 
     if(typeof searchTerm !== "string" || !searchTerm || searchTerm.trim() === ""){
         throw new ApiError(400, "Invalid search term.")
@@ -157,7 +175,7 @@ const searchTagsByName = asyncHandler(async(req,res)=>{
     const termFound = await Tag.find({name: regex}).sort({createdAt: -1})
 
     if(termFound.length === 0){
-        return res.status(204).json(new ApiResponse(204, [], "Tags not found in database."))
+        return res.status(200).json(new ApiResponse(204, [], "Tags not found in database."))
     }
 
     return res.status(200).json(new ApiResponse(200, termFound, "Tags found successfully."))

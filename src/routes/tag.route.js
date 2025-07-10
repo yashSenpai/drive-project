@@ -14,10 +14,10 @@ const router = Router()
 
 router.route("/createTag").post(verifyJWT, createTag)
 router.route("/getAllTags").get(verifyJWT, getAllTags)
-router.route("/getTagById").get(verifyJWT, getTagById)
-router.route("/updateTagById").put(verifyJWT, updateTagById)
-router.route("/deleteTagById").delete(verifyJWT, deleteTagById)
-router.route("/getTagsByUser").get(verifyJWT, getTagsByUser)
-router.route("/searchTagsByName").get(verifyJWT, searchTagsByName)
+router.route("/getTagById/:tagId").get(verifyJWT, getTagById)
+router.route("/updateTagById/:tagId").put(verifyJWT, updateTagById)
+router.route("/deleteTagById/:tagId").delete(verifyJWT, deleteTagById)
+router.route("/getTagsByUser/:userId").get(verifyJWT, getTagsByUser)
+router.route("/searchTagsByName/:searchTerm").get(verifyJWT, searchTagsByName)
 
 export default router
