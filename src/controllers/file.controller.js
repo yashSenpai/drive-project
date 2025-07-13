@@ -3,6 +3,7 @@ import { File } from "../models/file.model.js"
 import { asyncHandler } from "../utils/asyncHandler.js"
 import { ApiResponse } from "../utils/ApiResponse.js"
 import { uploadOnCloudinary } from "../utils/fileUpload.js"
+import { deleteFromCloudinary } from "../utils/fileDeletion.js"
 
 const uploadFile = asyncHandler(async(req,res)=>{
     // Input: req.body: { name, type, size, owner, folder, url, tags } & Output: saved file

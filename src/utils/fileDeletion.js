@@ -20,3 +20,5 @@ const deleteFromCloudinary = async (localFilePath) => {
         throw error
     }
 }
+
+export { deleteFromCloudinary }

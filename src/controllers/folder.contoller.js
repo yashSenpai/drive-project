@@ -1,7 +1,9 @@
 import { ApiError } from "../utils/ApiError.js";
-import { Folder } from "../models/folder.model.js"
+import { Folder } from "../models/folder.model.js";
+import { File } from "../models/file.model.js"
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import { deleteFromCloudinary } from "../utils/fileDeletion.js";
 
 const createFolder = asyncHandler(async(req,res)=>{
     //Goal: Create a new folder, optionally nested under a parent.
@@ -285,9 +287,18 @@ const deleteFolder = asyncHandler(async(req,res)=>{
 
     if (!folder){
         throw new ApiError(404, "Folder not found.");
-        }
+    }
 
     const deleteFolderRecursively = async (folderId) =>{
+
+        const filesInFolder = await File.find({folder: folderId})
+
+        for(const file of filesInFolder){
+            if(file.public_id){
+                await deleteFromCloudinary(file.public_id)
+            }
+              await File.findByIdAndDelete(file._id)
+        }
 
         const children = await Folder.find({ parent: folderId });
         for (const child of children){
@@ -298,7 +309,7 @@ const deleteFolder = asyncHandler(async(req,res)=>{
 
     }
 
-    await deleteFolderRecursively(folderId) //recursive folder and files deletion
+    await deleteFolderRecursively(folderId)
 
     return res.status(200).json(new ApiResponse(200, {}, "Deleted folder successfully."))
 })
