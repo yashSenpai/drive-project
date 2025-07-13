@@ -1,7 +1,7 @@
-import { ApiError } from "../utils/ApiError.js";
+import { ApiError } from "../utils/ApiError.js"
 import { File } from "../models/file.model.js"
-import { asyncHandler } from "../utils/asyncHandler.js";
-import { ApiResponse } from "../utils/ApiResponse.js";
+import { asyncHandler } from "../utils/asyncHandler.js"
+import { ApiResponse } from "../utils/ApiResponse.js"
 import { uploadOnCloudinary } from "../utils/fileUpload.js"
 
 const uploadFile = asyncHandler(async(req,res)=>{
@@ -33,7 +33,7 @@ const uploadFile = asyncHandler(async(req,res)=>{
 
     const url = await uploadOnCloudinary(urlLocalPath)
 
-    if(!url.url){
+    if(!url.url || !url.public_id){
         throw new ApiError(400, "Error while uploading on file")
     }
 
@@ -44,6 +44,7 @@ const uploadFile = asyncHandler(async(req,res)=>{
         owner: owner,
         folder: folder,
         url: url.url,
+        public_id: url.public_id,
         tags: tags
     })
 
@@ -140,6 +141,12 @@ const deleteFile = asyncHandler(async(req,res)=>{
         throw new ApiError(404,"File not found or already deleted.")
     }
 
+    const public_id = deletedFile.public_id
+
+    if (public_id){
+        await deleteFromCloudinary(public_id)
+    }
+
     return res.status(200).json(new ApiResponse(200, deletedFile, "File deleted successfully."))
 })
 
@@ -202,7 +209,7 @@ const searchFilesByTagName = asyncHandler(async(req,res)=>{
         throw new ApiError(400, "Searching text not found.")
     }
 
-    const regex = new RegExp(searchTag, "i");
+    const regex = new RegExp(searchTag, "i")
 
     const searchedFiles = await File.find({
         tags:{
@@ -230,7 +237,7 @@ const searchFilesByFileName = asyncHandler(async(req,res)=>{
         throw new ApiError(400, "Searching text not found.")
     }
 
-    const regex = new RegExp(searchText, "i");
+    const regex = new RegExp(searchText, "i")
 
     const searchedFiles = await File.find({
         name: regex
@@ -291,35 +298,50 @@ const filterFilesBySizeRange = asyncHandler(async(req,res)=>{
     return res.status(200).json(new ApiResponse(200, filterBySizeRange, "Files filtered successfully."))
 })
 
-const bulkDeleteFiles = asyncHandler(async(req,res)=>{
-    // Input: req.body.fileIds (array) & Output: Confirmation
+    const bulkDeleteFiles = asyncHandler(async(req,res)=>{
+        // Input: req.body.fileIds (array) & Output: Confirmation
 
-    //1. Extract array of fileIds.
-    //2. Use File.deleteMany({ _id: { $in: fileIds } }).
-    //3. Return success message. 
-    
-    const {fileIds} = req.body
+        //1. Extract array of fileIds.
+        //2. Use File.deleteMany({ _id: { $in: fileIds } }).
+        //3. Return success message. 
+        
+        const {fileIds} = req.body
+        
 
-    console.log(fileIds);
-    
-
-    if(!fileIds || !Array.isArray(fileIds) || fileIds.length === 0){
-        throw new ApiError(400, "Invalid File Ids.")
-    }
-
-    const filesDeleted = await File.deleteMany({
-        _id: {
-            $in: fileIds
+        if(!fileIds || !Array.isArray(fileIds) || fileIds.length === 0){
+            throw new ApiError(400, "Invalid File Ids.")
         }
+
+        const files = await File.find({
+             _id: {
+                $in: fileIds
+            }
+        })
+
+        if(files.length === 0){
+            throw new ApiError(400, "No files found to delete.")
+        }
+
+        const filesDeleted = await File.deleteMany({
+            _id: {
+                $in: fileIds
+            }
+        })
+
+        if(filesDeleted.deletedCount === 0){
+            throw new ApiError(400, "Unsuccessful to delete files.")
+        }
+
+        for(const fileId of files){
+            const public_id = fileId.public_id
+            if(public_id){
+                await deleteFromCloudinary(public_id)
+            }
+        }
+
+        return res.status(200).json(new ApiResponse(200, filesDeleted, "Files Deleted Successfully."))
+
     })
-
-    if(filesDeleted.deletedCount === 0){
-        throw new ApiError(400, "Unsuccessful to delete files.")
-    }
-
-    return res.status(200).json(new ApiResponse(200, filesDeleted, "Files Deleted Successfully."))
-
-})
 
 const moveFilesToFolder = asyncHandler(async(req,res) =>{
     // Input: req.body.fileIds, req.body.newFolderId & Output: Updated files
@@ -408,7 +430,7 @@ const removeTagsFromFile = asyncHandler(async(req,res)=> {
     }
 
     if (!Array.isArray(tags) || tags.length === 0) {
-        throw new ApiError(400, "Tags must be a non-empty array.");
+        throw new ApiError(400, "Tags must be a non-empty array.")
     }
 
     const tagRemovedFile = await File.findByIdAndUpdate(fileId,{

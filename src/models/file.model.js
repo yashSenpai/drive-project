@@ -28,6 +28,10 @@ const fileSchema = new Schema({
         ref: "Folder",
         default: null
     },
+    public_id:{
+        type: String,
+        required: true
+    },
     url:{
         type: String,
         required: true
